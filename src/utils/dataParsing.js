@@ -74,7 +74,7 @@ export const getMasterData = () => {
 export const columnDefs = () => {
   let tempColumnDef = [];
   Object.keys(excelHeaders).map((key) => {
-    tempColumnDef.push({ field: key });
+    //tempColumnDef.push({ field: key });
     excelHeaders[key].forEach((item) => {
       tempColumnDef.push({ field: item['title'] });
     });
@@ -119,3 +119,9 @@ export function getData() {
   ];
   return rowData;
 }
+
+export const columnDef = [
+  // we're using the auto group column by default!
+  { field: 'week1' },
+  { field: 'week2' },
+];
