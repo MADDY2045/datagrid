@@ -1,15 +1,21 @@
 export const rows = [
-  { isoCode: 'swe' },
-  { isoCode: 'deu' },
-  { isoCode: 'mex' },
+  { isoCode: 'swe', week2: 'week2' },
+  { isoCode: 'deu', week2: 'week3' },
+  { isoCode: 'mex', week2: 'week3' },
 ];
 
-export const columns = [{ columnId: 'flag', width: 150 }];
+export const columns = [
+  { columnId: 'flag', width: 150 },
+  { columnId: 'flag2', width: 150 },
+];
 
 export const headerRow = {
   rowId: 'header',
   height: 40,
-  cells: [{ type: 'header', text: 'Flags' }],
+  cells: [
+    { type: 'header', text: 'Flags' },
+    { type: 'header', text: 'week2' },
+  ],
 };
 
 export const getRows = (flags) => [
@@ -19,6 +25,7 @@ export const getRows = (flags) => [
     height: 60,
     cells: [
       { type: 'flag', text: flag.isoCode, nonEditable: flag.isoCode === 'deu' },
+      { type: 'flag', text: flag.week2, nonEditable: false },
     ],
   })),
 ];

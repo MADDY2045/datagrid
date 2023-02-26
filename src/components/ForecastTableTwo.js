@@ -11,6 +11,7 @@ const ForecastTableTwo = () => {
     <ReactGrid
       rows={rowMaster}
       columns={columns}
+      onCellsChanged={(e) => console.log('eeee', e)} //might be useful for undo/redo
       customCellTemplates={{ flag: new FlagCellTemplate() }}
     />
   );

@@ -13,7 +13,7 @@ import {
 
 export default class FlagCellTemplate {
   getCompatibleCell(uncertainCell) {
-    console.log('uncertainCell::::', uncertainCell);
+    //console.log('uncertainCell::::', uncertainCell);
     const text = getCellProperty(uncertainCell, 'text', 'string');
     const value = text;
     return { ...uncertainCell, text, value };
@@ -34,11 +34,18 @@ export default class FlagCellTemplate {
   }
 
   render(cell, isInEditMode, onCellChanged) {
+    console.log('entered render mode::::', cell, isInEditMode);
+
     if (!isInEditMode) {
       let text = 'Maddy';
       return (
         <>
-          <input type="text" disabled defaultValue={cell.text} />
+          <input
+            style={{ padding: '12px' }}
+            type="text"
+            disabled
+            defaultValue={cell.text}
+          />
         </>
       );
     }
@@ -48,6 +55,7 @@ export default class FlagCellTemplate {
           ref={(input) => {
             input && input.focus();
           }}
+          onClick={(e) => e.target.focus()}
           defaultValue={cell.text}
           onChange={(e) =>
             onCellChanged(
