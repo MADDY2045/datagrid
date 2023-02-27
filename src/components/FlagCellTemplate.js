@@ -34,7 +34,7 @@ export default class FlagCellTemplate {
   }
 
   render(cell, isInEditMode, onCellChanged) {
-    console.log('entered render mode::::', cell, isInEditMode);
+    //console.log('entered render mode::::', cell, isInEditMode);
 
     if (!isInEditMode) {
       let text = 'Maddy';
