@@ -1,0 +1,1 @@
+export const IS_COLUMN_HIDDEN = 'IS_COLUMN_HIDDEN';
