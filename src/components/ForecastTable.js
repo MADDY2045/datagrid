@@ -1,36 +1,86 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { weekData, masterData } from '../mock/mockData';
-import { generateTableData } from '../utils/dataParsing';
+import {
+  generateTableData,
+  getExpandedRows,
+  getRows,
+  buildTree,
+} from '../utils/dataParsing';
 import { ReactGrid } from '@silevis/reactgrid';
 import { cloneDeep } from 'lodash';
 import '@silevis/reactgrid/styles.css';
+import { evaluate } from 'mathjs';
 
 const ForecastTable = () => {
   const { weekData, masterData } = useSelector(
     (state) => state.initialApiReducer
   );
   const [hiddenColumns, setHiddenColumns] = useState([]);
+  const [people, setPeople] = useState([]);
   const [columns, setColumns] = useState([]);
+  const [headerRow, setHeaderRow] = useState({});
   const [rows, setRows] = useState([]);
+  const [rowsToRender, setRowsToRender] = useState([]);
+  const [tempColDef, setTempColDef] = useState([]);
   const [data, setData] = useState(null);
 
   useEffect(() => {
     console.log('weekData:', weekData);
     console.log('masterData:', masterData);
-    const { rows, columns } = generateTableData(
-      weekData,
-      masterData,
-      hiddenColumns
-    );
+    const { rows, columns, headerRow, singleRows, response, tempColDef } =
+      generateTableData(weekData, masterData, hiddenColumns);
     console.log('rows,columns', rows, columns);
-    setRows(rows);
+    setRows(singleRows);
+    setPeople(response);
+    setRowsToRender([headerRow, ...getExpandedRows(singleRows)]);
     setColumns(columns);
-  }, [weekData, masterData, hiddenColumns]);
+    setTempColDef(tempColDef);
+    setHeaderRow(headerRow);
+  }, []);
 
   const handleMasterContextMenu = (e) => {
     setData(e.target.childNodes[0].textContent);
   };
+
+  useEffect(() => {
+    if (hiddenColumns.length > 0) {
+      console.clear();
+      console.log('hiddenColumns:::', hiddenColumns);
+      console.log('actual cols:::', columns);
+      let columnsNew = cloneDeep([...columns]);
+      let rowsNew = cloneDeep([...rowsToRender]);
+      let lookUpIndex = columnsNew
+        .filter((item) => hiddenColumns.includes(item.columnId))
+        .map((ele) => ele.currentIndex)[0];
+      let filteredCols = columnsNew.filter(
+        (item) => !hiddenColumns.includes(item.columnId)
+      );
+      let filteredRows = rowsNew.map((item) => {
+        if (item.rowId === 'header') {
+          return {
+            ...item,
+            cells: item.cells.filter(
+              (ele, index) => !hiddenColumns.includes(ele.text)
+            ),
+          };
+        } else {
+          return {
+            ...item,
+            cells: item.cells.filter(
+              (ele, index) => !hiddenColumns.includes(ele.rowMappingColId)
+            ),
+          };
+        }
+      });
+      console.log('filteredCols:::', filteredCols);
+      setRowsToRender([...filteredRows]);
+      setColumns([...filteredCols]);
+      console.log('lookUpIndex', lookUpIndex);
+      console.log('actual filteredRows:::', filteredRows);
+    }
+  }, [hiddenColumns]);
+
   const handleContextMenu = (
     selectedRowIds,
     selectedColIds,
@@ -74,10 +124,21 @@ const ForecastTable = () => {
     return [...prevPeople];
   };
 
+  function isValid(expr) {
+    try {
+      return evaluate(expr);
+    } catch (e) {
+      console.log('e:::::', e);
+      return 'notvalid';
+    }
+  }
+
   const handleChanges = (changes) => {
     const newRows = [...rows];
+    console.log('newRows:::', newRows);
     changes.map((change) => {
-      const changeRowIdx = rows.findIndex((el) => el.rowId === change.rowId);
+      console.log('change::::', change);
+      const changeRowIdx = newRows.findIndex((el) => el.rowId === change.rowId);
       const changeColumnIdx = columns.findIndex(
         (el) => el.columnId === change.columnId
       );
@@ -87,12 +148,39 @@ const ForecastTable = () => {
       let clonedNewCellText = clonedNewCell.text;
       //console.log("new row cell cloned::::::", clonedNewCellText);
       if (change.columnId === 'Fiscal_weeks') {
+        console.log(newRows[changeRowIdx]);
         newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
+        setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
         //setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
+      } else {
+        let prevText = change.newCell.text;
+        //console.log("prevText:::::", prevText);
+        let isValidMath = isValid(prevText);
+        if (isValidMath === 'notvalid') return;
+        if (isValidMath !== 'notvalid') {
+          //console.log("isValidMath:::::", isValidMath);
+          let textToBeUpdated = isValidMath?.textValue
+            ? isValidMath?.textValue
+            : isValidMath;
+          //console.log("textToBeUpdated::::", textToBeUpdated);
+          let parsedCloneNewCell = JSON.parse(clonedNewCellText);
+          //console.log("parsedCloneNewCell::::", parsedCloneNewCell);
+          parsedCloneNewCell.textValue = textToBeUpdated;
+          //parsedCloneNewCell.textValue = textToBeUpdated;
+          change.newCell.text = JSON.stringify(parsedCloneNewCell);
+          //console.log("change.newCell.text:::after final", change.newCell.text);
+          //console.log("prevText::::", result);
+          console.log('after parsing:::', change.newCell.text);
+          newRows[changeRowIdx].cells[changeColumnIdx] = {
+            ...newRows[changeRowIdx].cells[changeColumnIdx],
+            text: change.newCell.text,
+          };
+          setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+          //setRows(newRows);
+          setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
+        }
       }
-      setRows(newRows);
     });
-    //setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
   };
 
   return (
@@ -106,10 +194,8 @@ const ForecastTable = () => {
         }}
       >
         <ReactGrid
-          rows={rows}
-          columns={columns.filter(
-            (column) => !hiddenColumns.includes(column.columnId)
-          )}
+          rows={rowsToRender}
+          columns={columns}
           onCellsChanged={handleChanges}
           onContextMenu={handleContextMenu}
           stickyLeftColumns={1}

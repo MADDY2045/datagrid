@@ -66,15 +66,18 @@ export function generateTableData(weekData, masterData, hiddenColumns) {
     /* header row */
     let headerRow = initialHeaderRow(columns, hiddenColumns);
     /* get rows */
-    let rows = getRows(
-      headerRow,
-      initialApiData,
-      tempColDef,
-      hiddenColumns,
-      masterData
+    let rows = buildTree(
+      getRows(headerRow, initialApiData, tempColDef, hiddenColumns, masterData)
     );
     console.log('headerRow::::', headerRow);
-    return { rows: [headerRow, ...getExpandedRows(rows)], columns: columns };
+    return {
+      rows: [headerRow, ...getExpandedRows(rows)],
+      singleRows: rows,
+      columns: columns,
+      headerRow: headerRow,
+      response: initialApiData,
+      tempColDef: tempColDef,
+    };
   } catch (error) {
     console.log('error in generateTableData', error);
   }
@@ -166,16 +169,14 @@ function initialHeaderRow(columns, hiddenColumns) {
     return {
       rowId: 'header',
       height: 35,
-      cells: tempArray.filter(
-        (column) => !hiddenColumns.includes(column?.text)
-      ),
+      cells: tempArray,
     };
   } catch (error) {
     console.log('error in initialHeaderRow', error);
   }
 }
 
-function getRows(
+export function getRows(
   headerRow,
   initialApiRow,
   tempColDef,
@@ -194,7 +195,7 @@ function getRows(
           tempColDef,
           hiddenColumns,
           masterData
-        )?.filter((cell) => !hiddenColumns.includes(cell?.columnId)),
+        ),
       });
     });
     return [...returnArray];
@@ -207,55 +208,59 @@ function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
   let acc = [];
   try {
     tempColDef.map((key) => {
-      if (!hiddenColumns.includes(key['text'])) {
-        let anamolousTag = getAnamolousTagging(
-          value,
-          key?.currentIndex,
-          masterData
-        );
-        let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
-        let textValue = JSON.stringify({
-          textValue: person?.[key?.['text']].toString(),
-          anamolousTagValue: anamolousTag,
-          lockStatus: lockStatus,
-        });
-        acc = [
-          ...acc,
-          isCellFirstColumn(key?.text)
-            ? {
-                type: 'chevron',
-                indent: 1,
-                isExpanded: true,
-                hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
-                  JSON.parse(textValue)?.textValue
-                ),
-                //id: textValue,
-                parentId:
-                  getParentId(JSON.parse(textValue).textValue) === -1
-                    ? undefined
-                    : getParentId(JSON.parse(textValue).textValue),
-                text: JSON.parse(textValue).textValue || '',
-                style:
-                  key &&
-                  person['Fiscal_weeks'] &&
-                  getStyle(person['Fiscal_weeks'], key),
-                //className: "maddy",
-              }
-            : {
-                type: 'text',
-                nonEditable: !(
-                  isEditable(person['Fiscal_weeks']) &&
-                  key?.['currentIndex'] >= 53
-                ),
-                style:
-                  key &&
-                  person['Fiscal_weeks'] &&
-                  getStyle(person['Fiscal_weeks'], key),
-                className: 'maddy',
-                text: textValue || '',
-              },
-        ];
-      }
+      let anamolousTag = getAnamolousTagging(
+        value,
+        key?.currentIndex,
+        masterData
+      );
+      let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
+      let textValue = JSON.stringify({
+        textValue: person?.[key?.['text']].toString(),
+        anamolousTagValue: anamolousTag,
+        lockStatus: lockStatus,
+      });
+      acc = [
+        ...acc,
+        isCellFirstColumn(key?.text)
+          ? {
+              type: 'chevron',
+              rowMappingColId: key['text'],
+              indent: 1,
+              isExpanded: true,
+              hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
+                JSON.parse(textValue)?.textValue
+              ),
+              //id: textValue,
+              parentId:
+                getParentId(JSON.parse(textValue).textValue) === -1
+                  ? undefined
+                  : getParentId(JSON.parse(textValue).textValue),
+              text: JSON.parse(textValue).textValue || '',
+              style:
+                key &&
+                person['Fiscal_weeks'] &&
+                getStyle(person['Fiscal_weeks'], key),
+              //className: "maddy",
+              renderer: (textValue) =>
+                renderCell(textValue, key, person?.['Fiscal_weeks']),
+            }
+          : {
+              type: 'text',
+              nonEditable: !(
+                isEditable(person['Fiscal_weeks']) &&
+                key?.['currentIndex'] >= 53
+              ),
+              rowMappingColId: key['text'],
+              style:
+                key &&
+                person['Fiscal_weeks'] &&
+                getStyle(person['Fiscal_weeks'], key),
+              className: 'maddy',
+              text: textValue || '',
+              renderer: (textValue) =>
+                renderCell(textValue, key, person?.['Fiscal_weeks']),
+            },
+      ];
     });
     return acc;
   } catch (e) {
@@ -312,39 +317,33 @@ export function findParentKeyForRowValue(rowValue) {
 
 export function getBorder(key) {
   try {
-    if (key && key?.['currentIndex']) {
-      return {
-        right: {
-          color: key?.['currentIndex'] === 52 && 'black',
-          style: 'solid',
-          width: '2px',
-        },
-      };
-    }
+    return {
+      right: {
+        color: key?.['currentIndex'] === 52 && 'black',
+        style: 'solid',
+        width: '1px',
+      },
+    };
   } catch (error) {
     console.log('error in getBorder', error);
   }
 }
 export function getStyle(tag, key) {
   try {
-    if (tag && key) {
-      return {
-        background: isEditable(tag, key) ? 'rgb(240, 232, 249)' : 'white',
-        border: getBorder(key),
-      };
-    }
+    return {
+      background: isEditable(tag, key) ? 'rgb(240, 232, 249)' : 'white',
+      border: getBorder(key),
+    };
   } catch (error) {
     console.log('error in getStyle', error);
   }
 }
 export function isEditable(tag, key) {
   try {
-    if (tag && key) {
-      return (
-        editableObjArrays.includes(tag) &&
-        !(key?.['currentIndex'] >= 0 && key?.['currentIndex'] <= 52)
-      );
-    }
+    return (
+      editableObjArrays.includes(tag) &&
+      !(key?.['currentIndex'] >= 0 && key?.['currentIndex'] <= 52)
+    );
   } catch (error) {
     console.log('error in isEditable', error);
   }
@@ -397,11 +396,13 @@ export const isRowFullyExpanded = (rows, row) => {
   }
   return true;
 };
+
 export const getExpandedRows = (rows) =>
   rows.filter((row) => {
     const areAllParentsExpanded = isRowFullyExpanded(rows, row);
     return areAllParentsExpanded !== undefined ? areAllParentsExpanded : true;
   });
+
 export const getDirectChildRows = (rows, parentRow) =>
   rows.filter(
     (row) =>
@@ -409,7 +410,8 @@ export const getDirectChildRows = (rows, parentRow) =>
         (cell) => cell?.type === 'chevron' && cell.parentId === parentRow.rowId
       )
   );
-export const assignIndentAndHasChildren = (rows, parentRow, indent = 0) => {
+
+export function assignIndentAndHasChildren(rows, parentRow, indent = 0) {
   ++indent;
   getDirectChildRows(rows, parentRow).forEach((row) => {
     const foundChevronCell = findChevronCell(row);
@@ -420,7 +422,8 @@ export const assignIndentAndHasChildren = (rows, parentRow, indent = 0) => {
     }
     if (hasRowChildrens) assignIndentAndHasChildren(rows, row, indent);
   });
-};
+}
+
 export const buildTree = (rows) =>
   rows.map((row) => {
     const foundChevronCell = findChevronCell(row);
@@ -438,4 +441,16 @@ export function isCellFirstColumn(text) {
 }
 export function getParentId(textValue) {
   return colHeaderSequence.indexOf(findParentKeyForRowValue(textValue));
+}
+
+export function renderCell(text, key, header) {
+  let actualText = JSON.parse(text).textValue;
+  let anamolousTagValue = JSON.parse(text).anamolousTagValue;
+  let lockStatus = JSON.parse(text).lockStatus;
+  //console.log("lockStatus:::::", lockStatus);
+  return (
+    <>
+      <>{actualText}</>
+    </>
+  );
 }
