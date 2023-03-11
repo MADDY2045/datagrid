@@ -1,7 +1,6 @@
 import { combineReducers } from 'redux';
-import { updateRowReducer, isColumnHiddenReducer } from './updateRowReducer';
+import { initialApiReducer } from './initialApiReducer';
 
 export default combineReducers({
-  updateRowReducer,
-  isColumnHiddenReducer,
+  initialApiReducer,
 });

@@ -1,14 +1,13 @@
 import React from 'react';
 import Navbar from './components/Navbar';
 import './App.css';
-import ForecastTableTwo from './components/ForecastTableTwo';
+import ForecastTable from './components/ForecastTable';
 
 const App = () => {
   return (
     <div>
       <Navbar />
-      {/* <ForecastTable /> */}
-      <ForecastTableTwo />
+      <ForecastTable />
     </div>
   );
 };

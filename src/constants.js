@@ -1,1 +1,2 @@
 export const IS_COLUMN_HIDDEN = 'IS_COLUMN_HIDDEN';
+export const UPDATE_API_DATA = 'UPDATE_API_DATA';

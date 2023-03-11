@@ -1,86 +1,441 @@
-export const initialApiRow = [
-  { header: 'TotalBase', week1: '155', week2: '123.45', week3: '100' },
-  { header: 'Forecast', week1: '912.55', week2: '567.88', week3: '100' },
-  { header: 'Promo', week1: '845.44', week2: '999', week3: '100' },
-  { header: 'Total Demand', week1: '845.44', week2: '999', week3: '100' },
-  { header: 'Non Base', week1: '845.44', week2: '999', week3: '100' },
-  { header: 'Total Demand 2023', week1: '845.44', week2: '999', week3: '100' },
+export let eligibleAnamolousString = 'Total_demand';
+export let eligibleLockArray = ['BaseAdditiveOne', 'NonBaseOne', 'PromoOne'];
+export const editableObjArrays = ['BaseAdditiveOne', 'NonBaseOne', 'PromoOne'];
+export const colHeaderSequence = [
+  'Lift',
+  'Base',
+  'NonBase',
+  'NonBasePromo',
+  'Non-Base Others',
+  'BY Demand Forecast',
+  'Total Forecast',
+  'BaseAdditiveOne',
+  'Total Forecast Base',
+  'Total Forecast Non Base',
+  //"Total Forecast Others",
+  'NonBaseOne',
+  'PromoOne',
+  //"OtherOne",
+  'Total_demand 2022',
+  'Sales 2022',
+  'nb_promo 2022',
+  'nb_non_promo 2022',
+  'Lost_Sales 2022',
+  'Total_demand 2023',
+  'Sales 2023',
+  'nb_promo 2023',
+  'nb_non_promo 2023',
+  'Lost_Sales 2023',
+  'Total_demand 2024',
+  'Sales 2024',
+  'nb_promo 2024',
+  'nb_non_promo 2024',
+  'Lost_Sales 2024',
 ];
-
-export function generateColumns(initialApiRow) {
-  let tempObj = {};
-  let tempArray = [];
-  Object.keys(initialApiRow[0]).map((key, index) => {
-    if (key === 'header') {
-      tempObj = { columnId: key, width: 100, currentIndex: 'header' };
-      tempArray.push(tempObj);
-    } else {
-      tempObj = { columnId: key, width: 100, currentIndex: index };
-      tempArray.push(tempObj);
-    }
-  });
-  return tempArray;
-}
-
-//console.log('initialApiRow:::::', generateColumns(initialApiRow));
-
-// export const initialApicolumns = [
-//   { columnId: 'header', width: 100, currentIndex: 'header' },
-//   { columnId: 'week2', width: 100, currentIndex: 0 },
-//   { columnId: 'week3', width: 100, currentIndex: 1 },
-// ];
-
-export function initialHeaderRow(columns) {
-  let tempObj = {};
-  let tempArray = [];
-  columns.map((item) => {
-    tempObj = { type: 'header', text: item.columnId };
-    tempArray.push(tempObj);
-  });
-  return { rowId: 'header', height: 40, cells: tempArray };
-}
-
-// console.log(
-//   'initialHeaderRow:::::::::::::',
-//   initialHeaderRow(generateColumns(initialApiRow))
-// );
-
-// export const initialApiheaderRow = {
-//   rowId: 'header',
-//   height: 40,
-//   cells: [
-//     { type: 'header', text: 'header' },
-//     { type: 'header', text: 'week1' },
-//     { type: 'header', text: 'week2' },
-//   ],
-// };
-
-export const getRows = (headerRow, columns, initialApiRow) => {
-  console.log('initialApiRow inside??', initialApiRow);
-  console.log('initialApiRow inside columns??', columns);
-  let tempObj = {};
-  let tempArray = [];
-  initialApiRow.map((row, idx) => {
-    console.log('each row::::', row);
-    let text = columns.map((col) => {
-      return { type: 'text', text: row?.[col['columnId']] };
-    });
-    console.log('text:::@@@@@@@@::', text);
-    tempObj = { rowId: idx, height: 60, cells: [...text] };
-    tempArray.push(tempObj);
-  });
-  console.log('tempArray::::', [headerRow, ...tempArray]);
-  return [headerRow, ...tempArray];
-  // return [
-  //   headerRow,
-  //   ...initialApiRow.map((row, idx) => ({
-  //     rowId: idx,
-  //     height: 60,
-  //     cells: [
-  //       { type: 'text', width: 100, text: row.header },
-  //       { type: 'text', width: 100, text: row.week1, nonEditatble: false },
-  //       { type: 'text', width: 100, text: row.week2, nonEditatble: false },
-  //     ],
-  //   })),
-  // ];
+export const parentRowsOfAnotherRows = {
+  Lift: ['Base', 'NonBase', 'BY Demand Forecast'],
+  NonBase: ['NonBasePromo', 'Non-Base Others'],
+  'Total Forecast': [
+    'Total Forecast Base',
+    'ProfileBase',
+    'Total Forecast Non Base',
+    'BaseAdditiveOne',
+  ],
+  'Total Forecast Non Base': [
+    'Total Forecast Others',
+    'Total Forecast Promo',
+    'PromoOne',
+    'NonBaseOne',
+  ],
+  'Total_demand 2022': ['Sales 2022', 'Lost_Sales 2022'],
+  'Sales 2022': ['nb_promo 2022', 'nb_non_promo 2022'],
+  'Total_demand 2023': ['Sales 2023', 'Lost_Sales 2023'],
+  'Sales 2023': ['nb_promo 2023', 'nb_non_promo 2023'],
+  'Total_demand 2024': ['Sales 2024', 'Lost_Sales 2024'],
+  'Sales 2024': ['nb_promo 2024', 'nb_non_promo 2024'],
 };
+
+export function generateTableData(weekData, masterData, hiddenColumns) {
+  try {
+    /* generate initial set of data */
+    let initialApiData = getInitialData(weekData, masterData);
+    /* generate temp col def */
+    let tempColDef = generateTempColDef(initialApiData);
+    /* generate columns */
+    let columns = generateColumns(initialApiData);
+    /* header row */
+    let headerRow = initialHeaderRow(columns, hiddenColumns);
+    /* get rows */
+    let rows = getRows(
+      headerRow,
+      initialApiData,
+      tempColDef,
+      hiddenColumns,
+      masterData
+    );
+    console.log('headerRow::::', headerRow);
+    return { rows: getExpandedRows(rows), columns: columns };
+  } catch (error) {
+    console.log('error in generateTableData', error);
+  }
+}
+
+function getInitialData(weekData, masterData) {
+  try {
+    let tempObj = {};
+    let tempArray = [];
+    let tempColumnDef = [];
+    weekData.map((item, index) => {
+      tempColumnDef.push({
+        type: 'header',
+        currentIndex: index,
+        text: item?.title,
+      });
+    });
+    Object.keys(masterData).map((key) => {
+      masterData[key].map((item, index) => {
+        let title = weekData[index].title;
+        tempObj = {
+          ...tempObj,
+          ['Fiscal_weeks']: key,
+          [title]: item?.['total'],
+        };
+      });
+      tempArray.push(tempObj);
+    });
+    return tempArray;
+  } catch (error) {
+    console.log('error in getinitial data', error);
+  }
+}
+
+function generateTempColDef(initialData) {
+  try {
+    let tempColumnDef = [];
+    Object.keys(initialData[0]).map((item, index) => {
+      tempColumnDef.push({
+        type: 'header',
+        text: item,
+        currentIndex: index === 0 ? 'header' : index - 1,
+      });
+    });
+    return tempColumnDef;
+  } catch (error) {
+    console.log('error in generateTempColDef', error);
+  }
+}
+
+function generateColumns(initialApiData) {
+  try {
+    let tempObj = {};
+    let tempArray = [];
+    Object.keys(initialApiData[0]).map((key, index) => {
+      if (key === 'header') {
+        tempObj = {
+          columnId: key,
+          width: 200,
+          currentIndex: 'header',
+        };
+        tempArray.push(tempObj);
+      } else {
+        tempObj = {
+          columnId: key,
+          width: 200,
+          currentIndex: index,
+        };
+        tempArray.push(tempObj);
+      }
+    });
+    return tempArray;
+  } catch (error) {
+    console.log('error in generate columns', error);
+  }
+}
+
+function initialHeaderRow(columns, hiddenColumns) {
+  try {
+    let tempObj = {};
+    let tempArray = [];
+    columns.map((item) => {
+      tempObj = {
+        type: 'header',
+        text: item?.columnId,
+      };
+      tempArray.push(tempObj);
+    });
+    return {
+      rowId: 'header',
+      height: 35,
+      cells: tempArray.filter(
+        (column) => !hiddenColumns.includes(column?.text)
+      ),
+    };
+  } catch (error) {
+    console.log('error in initialHeaderRow', error);
+  }
+}
+
+function getRows(
+  headerRow,
+  initialApiRow,
+  tempColDef,
+  hiddenColumns,
+  masterData
+) {
+  try {
+    let returnArray = [];
+    colHeaderSequence.map((value, idx) => {
+      returnArray.push({
+        rowId: idx,
+        height: 40,
+        cells: retrieveCells(
+          getParticularRowData(initialApiRow, value)[0],
+          value,
+          tempColDef,
+          hiddenColumns,
+          masterData
+        )?.filter((cell) => !hiddenColumns.includes(cell?.columnId)),
+      });
+    });
+    return [...returnArray];
+  } catch (error) {
+    console.log('error in getRows', error);
+  }
+}
+
+function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
+  let acc = [];
+  try {
+    tempColDef.map((key) => {
+      if (!hiddenColumns.includes(key['text'])) {
+        let anamolousTag = getAnamolousTagging(
+          value,
+          key?.currentIndex,
+          masterData
+        );
+        let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
+        let textValue = JSON.stringify({
+          textValue: person?.[key?.['text']].toString(),
+          anamolousTagValue: anamolousTag,
+          lockStatus: lockStatus,
+        });
+        acc = [
+          ...acc,
+          isCellFirstColumn(key?.text)
+            ? {
+                type: 'chevron',
+                indent: 1,
+                isExpanded: true,
+                hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
+                  JSON.parse(textValue)?.textValue
+                ),
+                //id: textValue,
+                parentId:
+                  getParentId(JSON.parse(textValue).textValue) === -1
+                    ? undefined
+                    : getParentId(JSON.parse(textValue).textValue),
+                text: JSON.parse(textValue).textValue || '',
+                style:
+                  key &&
+                  person['Fiscal_weeks'] &&
+                  getStyle(person['Fiscal_weeks'], key),
+                //className: "maddy",
+              }
+            : {
+                type: 'text',
+                nonEditable: !(
+                  isEditable(person['Fiscal_weeks']) &&
+                  key?.['currentIndex'] >= 53
+                ),
+                style:
+                  key &&
+                  person['Fiscal_weeks'] &&
+                  getStyle(person['Fiscal_weeks'], key),
+                className: 'maddy',
+                text: textValue || '',
+              },
+        ];
+      }
+    });
+    return acc;
+  } catch (e) {
+    console.log('error::::::::::::::::::::::', e);
+  }
+}
+
+export function getAnamolousTagging(value, currentIndex, masterData) {
+  //console.log("value::::::>>>>>>", value);
+  try {
+    if (
+      value.includes(eligibleAnamolousString) &&
+      masterData?.[value]?.[currentIndex]
+    ) {
+      return masterData?.[value]?.[currentIndex].isAnamolousTagged;
+    } else {
+      return undefined;
+    }
+  } catch (error) {
+    console.log('error in getAnamolousTagging', error);
+  }
+}
+
+export function getLockStatus(value, currentIndex, masterData) {
+  try {
+    if (
+      eligibleLockArray.includes(value) &&
+      masterData?.[value]?.[currentIndex]
+    ) {
+      return masterData?.[value]?.[currentIndex]?.lockStatus;
+    } else {
+      return undefined;
+    }
+  } catch (error) {
+    console.log('error in getLockStatus', error);
+  }
+}
+
+export function findParentKeyForRowValue(rowValue) {
+  try {
+    const keys = Object.keys(parentRowsOfAnotherRows);
+    let parentKey = '';
+    keys.map((key) => {
+      if (parentRowsOfAnotherRows[key].includes(rowValue)) {
+        parentKey = key;
+        return;
+      }
+    });
+    return parentKey;
+  } catch (error) {
+    console.log('error in findParentKeyForRowValue', error);
+  }
+}
+
+export function getBorder(key) {
+  try {
+    if (key && key?.['currentIndex']) {
+      return {
+        right: {
+          color: key?.['currentIndex'] === 52 && 'black',
+          style: 'solid',
+          width: '2px',
+        },
+      };
+    }
+  } catch (error) {
+    console.log('error in getBorder', error);
+  }
+}
+export function getStyle(tag, key) {
+  try {
+    if (tag && key) {
+      return {
+        background: isEditable(tag, key) ? 'rgb(240, 232, 249)' : 'white',
+        border: getBorder(key),
+      };
+    }
+  } catch (error) {
+    console.log('error in getStyle', error);
+  }
+}
+export function isEditable(tag, key) {
+  try {
+    if (tag && key) {
+      return (
+        editableObjArrays.includes(tag) &&
+        !(key?.['currentIndex'] >= 0 && key?.['currentIndex'] <= 52)
+      );
+    }
+  } catch (error) {
+    console.log('error in isEditable', error);
+  }
+}
+
+export function getParticularRowData(people, rowToFind) {
+  try {
+    return people.filter((val) => val?.['Fiscal_weeks'] === rowToFind);
+  } catch (error) {
+    console.log('error in getParticularRowData', error);
+  }
+}
+
+export const findChevronCell = (row) => {
+  return row.cells.find(function (cell) {
+    return cell.type === 'chevron';
+  });
+};
+/*
+
+      searches for a parent of given row
+
+    */
+export const findParentRow = (rows, row) =>
+  rows.find((r) => {
+    const foundChevronCell = findChevronCell(row);
+    return foundChevronCell ? r.rowId === foundChevronCell.parentId : false;
+  });
+/*
+
+      check if the row has children
+
+    */
+export const hasChildren = (rows, row) =>
+  rows.some((r) => {
+    const foundChevronCell = findChevronCell(r);
+    return foundChevronCell ? foundChevronCell.parentId === row.rowId : false;
+  });
+/*
+
+      Checks is row expanded
+
+    */
+export const isRowFullyExpanded = (rows, row) => {
+  const parentRow = findParentRow(rows, row);
+  if (parentRow) {
+    const foundChevronCell = findChevronCell(parentRow);
+    if (foundChevronCell && !foundChevronCell.isExpanded) return false;
+    return isRowFullyExpanded(rows, parentRow);
+  }
+  return true;
+};
+export const getExpandedRows = (rows) =>
+  rows.filter((row) => {
+    const areAllParentsExpanded = isRowFullyExpanded(rows, row);
+    return areAllParentsExpanded !== undefined ? areAllParentsExpanded : true;
+  });
+export const getDirectChildRows = (rows, parentRow) =>
+  rows.filter(
+    (row) =>
+      !!row?.cells?.find(
+        (cell) => cell?.type === 'chevron' && cell.parentId === parentRow.rowId
+      )
+  );
+export const assignIndentAndHasChildren = (rows, parentRow, indent = 0) => {
+  ++indent;
+  getDirectChildRows(rows, parentRow).forEach((row) => {
+    const foundChevronCell = findChevronCell(row);
+    const hasRowChildrens = hasChildren(rows, row);
+    if (foundChevronCell) {
+      foundChevronCell.indent = indent;
+      foundChevronCell.hasChildren = hasRowChildrens;
+    }
+    if (hasRowChildrens) assignIndentAndHasChildren(rows, row, indent);
+  });
+};
+export const buildTree = (rows) =>
+  rows.map((row) => {
+    const foundChevronCell = findChevronCell(row);
+    if (foundChevronCell && !foundChevronCell.parentId) {
+      const hasRowChildrens = hasChildren(rows, row);
+      foundChevronCell.hasChildren = hasRowChildrens;
+      if (hasRowChildrens) assignIndentAndHasChildren(rows, row, 1);
+    }
+    //console.log("row::::", row);
+    return row;
+  });
+
+export function isCellFirstColumn(text) {
+  return text === 'Fiscal_weeks';
+}
+export function getParentId(textValue) {
+  return colHeaderSequence.indexOf(findParentKeyForRowValue(textValue));
+}
