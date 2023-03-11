@@ -74,7 +74,7 @@ export function generateTableData(weekData, masterData, hiddenColumns) {
       masterData
     );
     console.log('headerRow::::', headerRow);
-    return { rows: getExpandedRows(rows), columns: columns };
+    return { rows: [headerRow, ...getExpandedRows(rows)], columns: columns };
   } catch (error) {
     console.log('error in generateTableData', error);
   }
