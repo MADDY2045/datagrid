@@ -24,34 +24,28 @@ const ForecastTable = () => {
   const [rowsToRender, setRowsToRender] = useState([]);
   const [tempColDef, setTempColDef] = useState([]);
   const [data, setData] = useState(null);
-
+  /* Buffer objects for handling show all*/
+  const [tempRowsToRender,setTempRowsToRender] = useState([]);
+  const [tempColumns,setTempColumns] = useState([]);
   useEffect(() => {
-    console.log('weekData:', weekData);
-    console.log('masterData:', masterData);
     const { rows, columns, headerRow, singleRows, response, tempColDef } =
       generateTableData(weekData, masterData, hiddenColumns);
-    console.log('rows,columns', rows, columns);
     setRows(singleRows);
     setPeople(response);
     setRowsToRender([headerRow, ...getExpandedRows(singleRows)]);
+    setTempRowsToRender([headerRow, ...getExpandedRows(singleRows)])
     setColumns(columns);
+    setTempColumns(columns)
     setTempColDef(tempColDef);
     setHeaderRow(headerRow);
   }, []);
 
   const handleMasterContextMenu = (e) => {
-    setData(e.target.childNodes[0].textContent);
+    setData(e?.target?.childNodes[0]?.textContent);
   };
 
   useEffect(() => {
-    console.log('header row changed in useEffect::::::', headerRow);
-  }, [headerRow]);
-
-  useEffect(() => {
     if (hiddenColumns.length > 0) {
-      console.clear();
-      console.log('hiddenColumns:::', hiddenColumns);
-      console.log('actual cols:::', columns);
       let columnsNew = cloneDeep([...columns]);
       let rowsNew = cloneDeep([...rowsToRender]);
       let lookUpIndex = columnsNew
@@ -102,16 +96,10 @@ const ForecastTable = () => {
         );
       }
       filteredHeaderRow = { ...filteredHeaderRow, cells: filterHeaderRow() };
-      console.log('filteredHeaderRow::', filteredHeaderRow);
       setHeaderRow(filteredHeaderRow);
-      console.log('filteredCols:::', filteredCols);
       setRowsToRender([...filteredRows]);
-      console.log('single rows::::', rows);
-      console.log('single rows after filtering::::', filteredSingleRows);
       setRows(filteredSingleRows);
       setColumns([...filteredCols]);
-      console.log('lookUpIndex', lookUpIndex);
-      console.log('actual filteredRows:::', filteredRows);
     }
   }, [hiddenColumns]);
 
@@ -122,18 +110,19 @@ const ForecastTable = () => {
     menuOptions
   ) => {
     let contextualMenu = {};
-    //console.log("data::::", data);
-    if (data === 'Fiscal_weeks') {
+    if (data && data === 'Fiscal_weeks' && hiddenColumns.length>0) {
       contextualMenu = {
         id: 'Show All',
         label: 'Show All',
         handler: () => {
           setHiddenColumns([]);
+          setRowsToRender(tempRowsToRender);
+          setColumns(tempColumns);
         },
       };
     }
 
-    if (data.includes('Week ')) {
+    if (data && data?.includes('Week ')) {
       contextualMenu = {
         ...contextualMenu,
         id: 'Hide',
@@ -171,7 +160,6 @@ const ForecastTable = () => {
     const newRows = cloneDeep([...rows]);
     changes.map((change) => {
       const changeRowIdx = newRows.findIndex((el) => el.rowId === change.rowId);
-      console.log('columns:::', columns);
       const changeColumnIdx = columns.findIndex(
         (el) => el.columnId === change.columnId
       );
@@ -179,50 +167,46 @@ const ForecastTable = () => {
         newRows[changeRowIdx].cells[changeColumnIdx]
       );
       let clonedNewCellText = clonedNewCell.text;
-      //console.log("new row cell cloned::::::", clonedNewCellText);
       if (change.columnId === 'Fiscal_weeks') {
-        console.log('change::::', change);
-        console.log(
-          'newRows[changeRowIdx].cells[changeColumnIdx]::',
-          newRows[changeRowIdx].cells[changeColumnIdx]
-        );
-        console.log('changeColumnIdx::::', changeColumnIdx);
-        console.log('change.newCell:::', change.newCell);
         newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
-        console.log('headerRow inside click:::::', headerRow);
         setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+        setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
         setRows(newRows);
         setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
       } else {
         let prevText = change.newCell.text;
-        //console.log("prevText:::::", prevText);
         let isValidMath = isValid(prevText);
         if (isValidMath === 'notvalid') return;
         if (isValidMath !== 'notvalid') {
-          //console.log("isValidMath:::::", isValidMath);
           let textToBeUpdated = isValidMath?.textValue
             ? isValidMath?.textValue
             : isValidMath;
-          //console.log("textToBeUpdated::::", textToBeUpdated);
           let parsedCloneNewCell = JSON.parse(clonedNewCellText);
-          //console.log("parsedCloneNewCell::::", parsedCloneNewCell);
           parsedCloneNewCell.textValue = textToBeUpdated;
-          //parsedCloneNewCell.textValue = textToBeUpdated;
           change.newCell.text = JSON.stringify(parsedCloneNewCell);
-          //console.log("change.newCell.text:::after final", change.newCell.text);
-          //console.log("prevText::::", result);
-          console.log('after parsing:::', change.newCell.text);
           newRows[changeRowIdx].cells[changeColumnIdx] = {
             ...newRows[changeRowIdx].cells[changeColumnIdx],
             text: change.newCell.text,
           };
           setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+          setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
           setRows(newRows);
           setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
         }
       }
     });
   };
+
+  const getInitialFocusLocation = () => {
+    if(columns.length > 0){
+      console.log(columns)
+      return {
+        rowId: 0,
+        columnId: columns[54].columnId
+      };
+    }
+    
+	};
 
   return (
     <div>
@@ -244,7 +228,7 @@ const ForecastTable = () => {
           enableRangeSelection
           enableRowSelection
           enableFillHandle
-          //initialFocusLocation={getInitialFocusLocation()}
+          initialFocusLocation={getInitialFocusLocation()}
         />
       </div>
     </div>

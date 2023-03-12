@@ -69,7 +69,6 @@ export function generateTableData(weekData, masterData, hiddenColumns) {
     let rows = buildTree(
       getRows(headerRow, initialApiData, tempColDef, hiddenColumns, masterData)
     );
-    console.log('headerRow::::', headerRow);
     return {
       rows: [headerRow, ...getExpandedRows(rows)],
       singleRows: rows,
@@ -94,9 +93,11 @@ function getInitialData(weekData, masterData) {
           type: 'header',
           currentIndex: index,
           text: item?.title,
+          isCurrentWeek:index === 54
         });
       }
     });
+    console.log('tempColumnDef::::',tempColumnDef);
     Object.keys(masterData).map((key) => {
       masterData?.[key].map((item, index) => {
         let title = weekData?.[index]?.title;
@@ -276,7 +277,6 @@ function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
 }
 
 export function getAnamolousTagging(value, currentIndex, masterData) {
-  //console.log("value::::::>>>>>>", value);
   try {
     if (
       value.includes(eligibleAnamolousString) &&
@@ -442,7 +442,6 @@ export const buildTree = (rows) =>
       foundChevronCell.hasChildren = hasRowChildrens;
       if (hasRowChildrens) assignIndentAndHasChildren(rows, row, 1);
     }
-    //console.log("row::::", row);
     return row;
   });
 
@@ -457,7 +456,6 @@ export function renderCell(text, key, header) {
   let actualText = JSON.parse(text).textValue;
   let anamolousTagValue = JSON.parse(text).anamolousTagValue;
   let lockStatus = JSON.parse(text).lockStatus;
-  //console.log("lockStatus:::::", lockStatus);
   return (
     <>
       <>{actualText}</>
