@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector,useDispatch } from 'react-redux';
 import { weekData, masterData } from '../mock/mockData';
 import {
   generateTableData,
@@ -11,8 +11,12 @@ import { ReactGrid } from '@silevis/reactgrid';
 import { cloneDeep } from 'lodash';
 import '@silevis/reactgrid/styles.css';
 import { evaluate } from 'mathjs';
+import { updateCellChanges,changeCellIndex } from '../actions/redoActions';
 
 const ForecastTable = () => {
+  const dispatch = useDispatch();
+  const cellChangesArray = useSelector((state) => state.redoReducer);
+  const cellIndexChanges = useSelector((state) => state.incrementReducer);
   const { weekData, masterData } = useSelector(
     (state) => state.initialApiReducer
   );
@@ -138,14 +142,31 @@ const ForecastTable = () => {
     return menuOptions;
   };
 
+  const applyNewValue = (changes, prevPeople, usePrevValue = false) => {
+		changes.forEach((change) => {
+			let baseValue = rows[change.rowId]?.cells[0]?.["text"];
+			let rowKey = change.columnId;
+			let textValueToBeUpdated = usePrevValue ? change.previousCell : change.newCell;
+			let dataIndex = people.findIndex(
+				(item) => item?.["Fiscal_weeks"] === baseValue);
+			if (dataIndex && dataIndex !== -1) {
+				//let arr = [...people];
+				prevPeople[dataIndex][rowKey] = textValueToBeUpdated.text;
+				//setPeople(arr);
+			}
+		});
+		return [...prevPeople];
+	};
+
+  useEffect(()=>{
+    console.log("cellChangesArray:::",cellChangesArray);
+  },[cellChangesArray])
   const applyChangesToPeople = (changes, prevPeople) => {
-    changes.forEach((change) => {
-      const personIndex = change.rowId;
-      const fieldName = change.columnId;
-      prevPeople[personIndex][fieldName] = change.newCell.text;
-    });
-    return [...prevPeople];
-  };
+		const updated = applyNewValue(changes, prevPeople);
+		dispatch(updateCellChanges(changes));
+		dispatch(changeCellIndex(1));
+		return updated;
+	};
 
   function isValid(expr) {
     try {
@@ -171,7 +192,7 @@ const ForecastTable = () => {
         newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
         setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
         setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-        setRows(newRows);
+        setRows(buildTree(newRows));
         setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
       } else {
         let prevText = change.newCell.text;
@@ -190,7 +211,7 @@ const ForecastTable = () => {
           };
           setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
           setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-          setRows(newRows);
+          setRows(buildTree(newRows));
           setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
         }
       }
@@ -206,6 +227,48 @@ const ForecastTable = () => {
       };
     }
     
+	};
+
+  const undoChanges = (changes, prevPeople) => {
+		const updated = applyNewValue(changes, prevPeople, true);
+		const newRows = cloneDeep([...rows])
+		changes.forEach((change) => {
+			const changeRowIdx = rows.findIndex((el) => el.rowId === change.rowId);
+			const changeColumnIdx = columns.findIndex(
+				(el) => el.columnId === change.columnId);
+			newRows[changeRowIdx].cells[changeColumnIdx] = change.previousCell;
+		});
+		setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+    setRows(buildTree(newRows));
+		dispatch(changeCellIndex(-1));
+		return updated;
+	};
+
+	const redoChanges = (changes, prevPeople) => {
+		const updated = applyNewValue(changes, prevPeople);
+		const newRows = [...rows];
+		changes.forEach((change) => {
+			const changeRowIdx = rows.findIndex((el) => el.rowId === change.rowId);
+			const changeColumnIdx = columns.findIndex(
+				(el) => el.columnId === change.columnId);
+			newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
+		});
+    setRowsToRender([headerRow, ...getExpandedRows(newRows)]);	
+    setRows(buildTree(newRows));
+		dispatch(changeCellIndex(1));
+		return updated;
+	};
+  
+  const handleUndoChanges = () => {
+		//console.log("handleUndoChanges:::::", cellChangesIndex);
+		if (cellIndexChanges >= 0) {
+			setPeople((prevPeople) => undoChanges(cellChangesArray[cellIndexChanges], prevPeople));
+		}
+	};
+	const handleRedoChanges = () => {
+		if (cellIndexChanges + 1 <= cellChangesArray.length - 1) {
+			setPeople((prevPeople) => redoChanges(cellChangesArray[cellIndexChanges + 1], prevPeople));
+		}
 	};
 
   return (
@@ -231,6 +294,10 @@ const ForecastTable = () => {
           initialFocusLocation={getInitialFocusLocation()}
         />
       </div>
+      <div style = {{display: "block",position: "absolute",bottom: 0}}> 
+      <button className = "btn btn-primary" onClick = {handleUndoChanges}> UNDO </button> 
+      <button className = "btn btn-warning m-2" onClick = {	handleRedoChanges } > REDO </button>
+      </div >
     </div>
   );
 };
