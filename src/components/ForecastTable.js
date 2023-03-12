@@ -44,6 +44,10 @@ const ForecastTable = () => {
   };
 
   useEffect(() => {
+    console.log('header row changed in useEffect::::::', headerRow);
+  }, [headerRow]);
+
+  useEffect(() => {
     if (hiddenColumns.length > 0) {
       console.clear();
       console.log('hiddenColumns:::', hiddenColumns);
@@ -51,30 +55,60 @@ const ForecastTable = () => {
       let columnsNew = cloneDeep([...columns]);
       let rowsNew = cloneDeep([...rowsToRender]);
       let lookUpIndex = columnsNew
-        .filter((item) => hiddenColumns.includes(item.columnId))
-        .map((ele) => ele.currentIndex)[0];
+        .filter((item) => hiddenColumns.includes(item?.columnId))
+        .map((ele) => ele?.currentIndex)?.[0];
       let filteredCols = columnsNew.filter(
-        (item) => !hiddenColumns.includes(item.columnId)
+        (item) => !hiddenColumns.includes(item?.columnId)
       );
       let filteredRows = rowsNew.map((item) => {
-        if (item.rowId === 'header') {
+        if (item?.rowId === 'header') {
           return {
             ...item,
-            cells: item.cells.filter(
+            cells: item?.cells.filter(
               (ele, index) => !hiddenColumns.includes(ele.text)
             ),
           };
         } else {
           return {
             ...item,
-            cells: item.cells.filter(
-              (ele, index) => !hiddenColumns.includes(ele.rowMappingColId)
+            cells: item?.cells.filter(
+              (ele, index) => !hiddenColumns.includes(ele?.rowMappingColId)
             ),
           };
         }
       });
+      let singleNewRows = cloneDeep([...rows]);
+      let filteredSingleRows = singleNewRows.map((item) => {
+        if (item.rowId === 'header') {
+          return {
+            ...item,
+            cells: item?.cells.filter(
+              (ele, index) => !hiddenColumns.includes(ele?.text)
+            ),
+          };
+        } else {
+          return {
+            ...item,
+            cells: item?.cells.filter(
+              (ele, index) => !hiddenColumns.includes(ele?.rowMappingColId)
+            ),
+          };
+        }
+      });
+      let filteredHeaderRow = cloneDeep(headerRow);
+      function filterHeaderRow() {
+        return filteredHeaderRow?.cells.filter(
+          (item) => !hiddenColumns.includes(item?.text)
+        );
+      }
+      filteredHeaderRow = { ...filteredHeaderRow, cells: filterHeaderRow() };
+      console.log('filteredHeaderRow::', filteredHeaderRow);
+      setHeaderRow(filteredHeaderRow);
       console.log('filteredCols:::', filteredCols);
       setRowsToRender([...filteredRows]);
+      console.log('single rows::::', rows);
+      console.log('single rows after filtering::::', filteredSingleRows);
+      setRows(filteredSingleRows);
       setColumns([...filteredCols]);
       console.log('lookUpIndex', lookUpIndex);
       console.log('actual filteredRows:::', filteredRows);
@@ -134,11 +168,10 @@ const ForecastTable = () => {
   }
 
   const handleChanges = (changes) => {
-    const newRows = [...rows];
-    console.log('newRows:::', newRows);
+    const newRows = cloneDeep([...rows]);
     changes.map((change) => {
-      console.log('change::::', change);
       const changeRowIdx = newRows.findIndex((el) => el.rowId === change.rowId);
+      console.log('columns:::', columns);
       const changeColumnIdx = columns.findIndex(
         (el) => el.columnId === change.columnId
       );
@@ -148,10 +181,18 @@ const ForecastTable = () => {
       let clonedNewCellText = clonedNewCell.text;
       //console.log("new row cell cloned::::::", clonedNewCellText);
       if (change.columnId === 'Fiscal_weeks') {
-        console.log(newRows[changeRowIdx]);
+        console.log('change::::', change);
+        console.log(
+          'newRows[changeRowIdx].cells[changeColumnIdx]::',
+          newRows[changeRowIdx].cells[changeColumnIdx]
+        );
+        console.log('changeColumnIdx::::', changeColumnIdx);
+        console.log('change.newCell:::', change.newCell);
         newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
+        console.log('headerRow inside click:::::', headerRow);
         setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-        //setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
+        setRows(newRows);
+        setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
       } else {
         let prevText = change.newCell.text;
         //console.log("prevText:::::", prevText);
@@ -176,7 +217,7 @@ const ForecastTable = () => {
             text: change.newCell.text,
           };
           setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-          //setRows(newRows);
+          setRows(newRows);
           setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
         }
       }

@@ -89,20 +89,24 @@ function getInitialData(weekData, masterData) {
     let tempArray = [];
     let tempColumnDef = [];
     weekData.map((item, index) => {
-      tempColumnDef.push({
-        type: 'header',
-        currentIndex: index,
-        text: item?.title,
-      });
+      if (item?.title) {
+        tempColumnDef.push({
+          type: 'header',
+          currentIndex: index,
+          text: item?.title,
+        });
+      }
     });
     Object.keys(masterData).map((key) => {
-      masterData[key].map((item, index) => {
-        let title = weekData[index].title;
-        tempObj = {
-          ...tempObj,
-          ['Fiscal_weeks']: key,
-          [title]: item?.['total'],
-        };
+      masterData?.[key].map((item, index) => {
+        let title = weekData?.[index]?.title;
+        if (title) {
+          tempObj = {
+            ...tempObj,
+            ['Fiscal_weeks']: key,
+            [title]: item?.['total'],
+          };
+        }
       });
       tempArray.push(tempObj);
     });
@@ -238,8 +242,8 @@ function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
               text: JSON.parse(textValue).textValue || '',
               style:
                 key &&
-                person['Fiscal_weeks'] &&
-                getStyle(person['Fiscal_weeks'], key),
+                person?.['Fiscal_weeks'] &&
+                getStyle(person?.['Fiscal_weeks'], key),
               //className: "maddy",
               renderer: (textValue) =>
                 renderCell(textValue, key, person?.['Fiscal_weeks']),
@@ -247,14 +251,14 @@ function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
           : {
               type: 'text',
               nonEditable: !(
-                isEditable(person['Fiscal_weeks']) &&
+                isEditable(person?.['Fiscal_weeks']) &&
                 key?.['currentIndex'] >= 53
               ),
-              rowMappingColId: key['text'],
+              rowMappingColId: key?.['text'],
               style:
                 key &&
-                person['Fiscal_weeks'] &&
-                getStyle(person['Fiscal_weeks'], key),
+                person?.['Fiscal_weeks'] &&
+                getStyle(person?.['Fiscal_weeks'], key),
               className: 'maddy',
               text: textValue || '',
               renderer: (textValue) =>
@@ -351,15 +355,18 @@ export function isEditable(tag, key) {
 
 export function getParticularRowData(people, rowToFind) {
   try {
-    return people.filter((val) => val?.['Fiscal_weeks'] === rowToFind);
+    let response = people.filter((val) => val?.['Fiscal_weeks'] === rowToFind);
+    if(response){
+      return response;
+    }
   } catch (error) {
     console.log('error in getParticularRowData', error);
   }
 }
 
 export const findChevronCell = (row) => {
-  return row.cells.find(function (cell) {
-    return cell.type === 'chevron';
+  return row && row?.cells.find(function (cell) {
+    return cell?.type === 'chevron';
   });
 };
 /*
