@@ -190,17 +190,20 @@ export function getRows(
   try {
     let returnArray = [];
     colHeaderSequence.map((value, idx) => {
-      returnArray.push({
-        rowId: idx,
-        height: 40,
-        cells: retrieveCells(
-          getParticularRowData(initialApiRow, value)[0],
-          value,
-          tempColDef,
-          hiddenColumns,
-          masterData
-        ),
-      });
+      if(getParticularRowData(initialApiRow, value)[0]){
+        returnArray.push({
+          rowId: idx,
+          height: 40,
+          cells: retrieveCells(
+            getParticularRowData(initialApiRow, value)[0],
+            value,
+            tempColDef,
+            hiddenColumns,
+            masterData
+          ),
+        });
+      }
+ 
     });
     return [...returnArray];
   } catch (error) {
