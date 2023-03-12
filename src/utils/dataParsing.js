@@ -66,16 +66,14 @@ export function generateTableData(weekData, masterData, hiddenColumns) {
     /* header row */
     let headerRow = initialHeaderRow(columns, hiddenColumns);
     /* get rows */
-    let rows = buildTree(
-      getRows(headerRow, initialApiData, tempColDef, hiddenColumns, masterData)
-    );
+    // let rows = buildTree(
+    //   getRows(headerRow, initialApiData, tempColDef, hiddenColumns, masterData)
+    // );
     return {
-      rows: [headerRow, ...getExpandedRows(rows)],
-      singleRows: rows,
-      columns: columns,
-      headerRow: headerRow,
-      response: initialApiData,
-      tempColDef: tempColDef,
+      columnsOp: columns,
+      headerRowOp: headerRow,
+      responseOp: initialApiData,
+      tempColDefOp: tempColDef,
     };
   } catch (error) {
     console.log('error in generateTableData', error);
@@ -93,11 +91,11 @@ function getInitialData(weekData, masterData) {
           type: 'header',
           currentIndex: index,
           text: item?.title,
-          isCurrentWeek:index === 54
+          isCurrentWeek: index === 54,
         });
       }
     });
-    console.log('tempColumnDef::::',tempColumnDef);
+    console.log('tempColumnDef::::', tempColumnDef);
     Object.keys(masterData).map((key) => {
       masterData?.[key].map((item, index) => {
         let title = weekData?.[index]?.title;
@@ -181,100 +179,100 @@ function initialHeaderRow(columns, hiddenColumns) {
   }
 }
 
-export function getRows(
-  headerRow,
-  initialApiRow,
-  tempColDef,
-  hiddenColumns,
-  masterData
-) {
-  try {
-    let returnArray = [];
-    colHeaderSequence.map((value, idx) => {
-      if(getParticularRowData(initialApiRow, value)[0]){
-        returnArray.push({
-          rowId: idx,
-          height: 40,
-          cells: retrieveCells(
-            getParticularRowData(initialApiRow, value)[0],
-            value,
-            tempColDef,
-            hiddenColumns,
-            masterData
-          ),
-        });
-      }
- 
-    });
-    return [...returnArray];
-  } catch (error) {
-    console.log('error in getRows', error);
-  }
-}
+// export function getRows(
+//   headerRow,
+//   initialApiRow,
+//   tempColDef,
+//   hiddenColumns,
+//   masterData
+// ) {
+//   try {
+//     let returnArray = [];
+//     colHeaderSequence.map((value, idx) => {
+//       if(getParticularRowData(initialApiRow, value)[0]){
+//         returnArray.push({
+//           rowId: idx,
+//           height: 40,
+//           cells: retrieveCells(
+//             getParticularRowData(initialApiRow, value)[0],
+//             value,
+//             tempColDef,
+//             hiddenColumns,
+//             masterData
+//           ),
+//         });
+//       }
 
-function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
-  let acc = [];
-  try {
-    tempColDef.map((key) => {
-      let anamolousTag = getAnamolousTagging(
-        value,
-        key?.currentIndex,
-        masterData
-      );
-      let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
-      let textValue = JSON.stringify({
-        textValue: person?.[key?.['text']].toString(),
-        anamolousTagValue: anamolousTag,
-        lockStatus: lockStatus,
-      });
-      acc = [
-        ...acc,
-        isCellFirstColumn(key?.text)
-          ? {
-              type: 'chevron',
-              rowMappingColId: key['text'],
-              indent: 1,
-              isExpanded: true,
-              hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
-                JSON.parse(textValue)?.textValue
-              ),
-              //id: textValue,
-              parentId:
-                getParentId(JSON.parse(textValue).textValue) === -1
-                  ? undefined
-                  : getParentId(JSON.parse(textValue).textValue),
-              text: JSON.parse(textValue).textValue || '',
-              style:
-                key &&
-                person?.['Fiscal_weeks'] &&
-                getStyle(person?.['Fiscal_weeks'], key),
-              //className: "maddy",
-              renderer: (textValue) =>
-                renderCell(textValue, key, person?.['Fiscal_weeks']),
-            }
-          : {
-              type: 'text',
-              nonEditable: !(
-                isEditable(person?.['Fiscal_weeks']) &&
-                key?.['currentIndex'] >= 53
-              ),
-              rowMappingColId: key?.['text'],
-              style:
-                key &&
-                person?.['Fiscal_weeks'] &&
-                getStyle(person?.['Fiscal_weeks'], key),
-              className: 'maddy',
-              text: textValue || '',
-              renderer: (textValue) =>
-                renderCell(textValue, key, person?.['Fiscal_weeks']),
-            },
-      ];
-    });
-    return acc;
-  } catch (e) {
-    console.log('error::::::::::::::::::::::', e);
-  }
-}
+//     });
+//     return [...returnArray];
+//   } catch (error) {
+//     console.log('error in getRows', error);
+//   }
+// }
+
+// function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
+//   let acc = [];
+//   try {
+//     tempColDef.map((key) => {
+//       let anamolousTag = getAnamolousTagging(
+//         value,
+//         key?.currentIndex,
+//         masterData
+//       );
+//       let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
+//       let textValue = JSON.stringify({
+//         textValue: person?.[key?.['text']].toString(),
+//         anamolousTagValue: anamolousTag,
+//         lockStatus: lockStatus,
+//       });
+//       acc = [
+//         ...acc,
+//         isCellFirstColumn(key?.text)
+//           ? {
+//               type: 'chevron',
+//               rowMappingColId: key['text'],
+//               indent: 1,
+//               isExpanded: true,
+//               hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
+//                 JSON.parse(textValue)?.textValue
+//               ),
+//               //id: textValue,
+//               parentId:
+//                 getParentId(JSON.parse(textValue).textValue) === -1
+//                   ? undefined
+//                   : getParentId(JSON.parse(textValue).textValue),
+//               text: JSON.parse(textValue).textValue || '',
+//               style:
+//                 key &&
+//                 person?.['Fiscal_weeks'] &&
+//                 getStyle(person?.['Fiscal_weeks'], key),
+//               //className: "maddy",
+//               renderer: (textValue) =>
+//                 renderCell(textValue, key, person?.['Fiscal_weeks']),
+//             }
+//           : {
+//               type: 'text',
+//               nonEditable: !(
+//                 isEditable(person?.['Fiscal_weeks']) &&
+//                 key?.['currentIndex'] >= 53
+//               ),
+//               rowMappingColId: key?.['text'],
+//               style:
+//                 key &&
+//                 person?.['Fiscal_weeks'] &&
+//                 getStyle(person?.['Fiscal_weeks'], key),
+//               className: 'maddy',
+//               text: textValue || '',
+//               renderer: (textValue) =>
+//                 renderCell(textValue, key, person?.['Fiscal_weeks']),
+//             },
+//       ];
+//     });
+//     return acc;
+//   } catch (e) {
+//     console.log('error::::::::::::::::::::::', e);
+//   }
+// }
 
 export function getAnamolousTagging(value, currentIndex, masterData) {
   try {
@@ -359,7 +357,7 @@ export function isEditable(tag, key) {
 export function getParticularRowData(people, rowToFind) {
   try {
     let response = people.filter((val) => val?.['Fiscal_weeks'] === rowToFind);
-    if(response){
+    if (response) {
       return response;
     }
   } catch (error) {
@@ -368,9 +366,12 @@ export function getParticularRowData(people, rowToFind) {
 }
 
 export const findChevronCell = (row) => {
-  return row && row?.cells.find(function (cell) {
-    return cell?.type === 'chevron';
-  });
+  return (
+    row &&
+    row?.cells.find(function (cell) {
+      return cell?.type === 'chevron';
+    })
+  );
 };
 /*
 
@@ -450,15 +451,4 @@ export function isCellFirstColumn(text) {
 }
 export function getParentId(textValue) {
   return colHeaderSequence.indexOf(findParentKeyForRowValue(textValue));
-}
-
-export function renderCell(text, key, header) {
-  let actualText = JSON.parse(text).textValue;
-  let anamolousTagValue = JSON.parse(text).anamolousTagValue;
-  let lockStatus = JSON.parse(text).lockStatus;
-  return (
-    <>
-      <>{actualText}</>
-    </>
-  );
 }
