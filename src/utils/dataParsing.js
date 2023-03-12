@@ -95,7 +95,6 @@ function getInitialData(weekData, masterData) {
         });
       }
     });
-    console.log('tempColumnDef::::', tempColumnDef);
     Object.keys(masterData).map((key) => {
       masterData?.[key].map((item, index) => {
         let title = weekData?.[index]?.title;
@@ -178,101 +177,6 @@ function initialHeaderRow(columns, hiddenColumns) {
     console.log('error in initialHeaderRow', error);
   }
 }
-
-// export function getRows(
-//   headerRow,
-//   initialApiRow,
-//   tempColDef,
-//   hiddenColumns,
-//   masterData
-// ) {
-//   try {
-//     let returnArray = [];
-//     colHeaderSequence.map((value, idx) => {
-//       if(getParticularRowData(initialApiRow, value)[0]){
-//         returnArray.push({
-//           rowId: idx,
-//           height: 40,
-//           cells: retrieveCells(
-//             getParticularRowData(initialApiRow, value)[0],
-//             value,
-//             tempColDef,
-//             hiddenColumns,
-//             masterData
-//           ),
-//         });
-//       }
-
-//     });
-//     return [...returnArray];
-//   } catch (error) {
-//     console.log('error in getRows', error);
-//   }
-// }
-
-// function retrieveCells(person, value, tempColDef, hiddenColumns, masterData) {
-//   let acc = [];
-//   try {
-//     tempColDef.map((key) => {
-//       let anamolousTag = getAnamolousTagging(
-//         value,
-//         key?.currentIndex,
-//         masterData
-//       );
-//       let lockStatus = getLockStatus(value, key?.currentIndex, masterData);
-//       let textValue = JSON.stringify({
-//         textValue: person?.[key?.['text']].toString(),
-//         anamolousTagValue: anamolousTag,
-//         lockStatus: lockStatus,
-//       });
-//       acc = [
-//         ...acc,
-//         isCellFirstColumn(key?.text)
-//           ? {
-//               type: 'chevron',
-//               rowMappingColId: key['text'],
-//               indent: 1,
-//               isExpanded: true,
-//               hasChildren: Object.keys(parentRowsOfAnotherRows).includes(
-//                 JSON.parse(textValue)?.textValue
-//               ),
-//               //id: textValue,
-//               parentId:
-//                 getParentId(JSON.parse(textValue).textValue) === -1
-//                   ? undefined
-//                   : getParentId(JSON.parse(textValue).textValue),
-//               text: JSON.parse(textValue).textValue || '',
-//               style:
-//                 key &&
-//                 person?.['Fiscal_weeks'] &&
-//                 getStyle(person?.['Fiscal_weeks'], key),
-//               //className: "maddy",
-//               renderer: (textValue) =>
-//                 renderCell(textValue, key, person?.['Fiscal_weeks']),
-//             }
-//           : {
-//               type: 'text',
-//               nonEditable: !(
-//                 isEditable(person?.['Fiscal_weeks']) &&
-//                 key?.['currentIndex'] >= 53
-//               ),
-//               rowMappingColId: key?.['text'],
-//               style:
-//                 key &&
-//                 person?.['Fiscal_weeks'] &&
-//                 getStyle(person?.['Fiscal_weeks'], key),
-//               className: 'maddy',
-//               text: textValue || '',
-//               renderer: (textValue) =>
-//                 renderCell(textValue, key, person?.['Fiscal_weeks']),
-//             },
-//       ];
-//     });
-//     return acc;
-//   } catch (e) {
-//     console.log('error::::::::::::::::::::::', e);
-//   }
-// }
 
 export function getAnamolousTagging(value, currentIndex, masterData) {
   try {

@@ -180,9 +180,6 @@ const ForecastTable = () => {
     return [...prevPeople];
   };
 
-  useEffect(() => {
-    console.log('cellChangesArray:::', cellChangesArray);
-  }, [cellChangesArray]);
   const applyChangesToPeople = (changes, prevPeople) => {
     const updated = applyNewValue(changes, prevPeople);
     dispatch(updateCellChanges(changes));
@@ -242,7 +239,6 @@ const ForecastTable = () => {
 
   const getInitialFocusLocation = () => {
     if (columns.length > 0) {
-      console.log(columns);
       return {
         rowId: 0,
         columnId: columns[54].columnId,
@@ -283,7 +279,6 @@ const ForecastTable = () => {
   };
 
   const handleUndoChanges = () => {
-    //console.log("handleUndoChanges:::::", cellChangesIndex);
     if (cellIndexChanges >= 0) {
       setPeople((prevPeople) =>
         undoChanges(cellChangesArray[cellIndexChanges], prevPeople)
