@@ -65,10 +65,6 @@ export function generateTableData(weekData, masterData, hiddenColumns) {
     let columns = generateColumns(initialApiData);
     /* header row */
     let headerRow = initialHeaderRow(columns, hiddenColumns);
-    /* get rows */
-    // let rows = buildTree(
-    //   getRows(headerRow, initialApiData, tempColDef, hiddenColumns, masterData)
-    // );
     return {
       columnsOp: columns,
       headerRowOp: headerRow,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { weekData, masterData } from '../mock/mockData';
 import {
@@ -21,6 +21,8 @@ import '@silevis/reactgrid/styles.css';
 import { evaluate } from 'mathjs';
 import { updateCellChanges, changeCellIndex } from '../actions/redoActions';
 
+const isMacOs = () => window.navigator.appVersion.indexOf('Mac') !== -1;
+
 const ForecastTable = () => {
   const dispatch = useDispatch();
   const cellChangesArray = useSelector((state) => state.redoReducer);
@@ -40,28 +42,24 @@ const ForecastTable = () => {
       getRows(headerRow, people, tempColDefOp, hiddenColumns, masterData)
     )
   );
+  console.log('entered here');
   const [rowsToRender, setRowsToRender] = useState([
     headerRow,
     ...getExpandedRows(rows),
   ]);
-
-  const [tempColDef, setTempColDef] = useState(tempColDefOp);
   const [data, setData] = useState(null);
   /* Buffer objects for handling show all*/
   const [tempRowsToRender, setTempRowsToRender] = useState(rowsToRender);
   const [tempColumns, setTempColumns] = useState(columns);
-  // useEffect(() => {
-  //   const { rows, columns, headerRow, singleRows, response, tempColDef } =
-  //     generateTableData(weekData, masterData, hiddenColumns);
-  //   setRows(singleRows);
-  //   setPeople(response);
-  //   setRowsToRender([headerRow, ...getExpandedRows(singleRows)]);
-  //   setTempRowsToRender([headerRow, ...getExpandedRows(singleRows)])
-  //   setColumns(columns);
-  //   setTempColumns(columns)
-  //   setTempColDef(tempColDef);
-  //   setHeaderRow(headerRow);
-  // }, []);
+  /* utility to handle focused range selection */
+  let reactGrid = useRef(null);
+  const [focusedRange, setFocusedRange] = useState(null);
+  let focusedRangeTwo = useRef(null);
+  let prevSelectedRange = useRef(focusedRange);
+
+  useEffect(() => {
+    prevSelectedRange.current = focusedRange;
+  }, [reactGrid]);
 
   const handleMasterContextMenu = (e) => {
     setData(e?.target?.childNodes[0]?.textContent);
@@ -211,7 +209,7 @@ const ForecastTable = () => {
         newRows[changeRowIdx].cells[changeColumnIdx] = change.newCell;
         setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
         setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-        setRows(buildTree(newRows));
+        setRows(newRows);
         setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
       } else {
         let prevText = change.newCell.text;
@@ -230,7 +228,7 @@ const ForecastTable = () => {
           };
           setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
           setTempRowsToRender([headerRow, ...getExpandedRows(newRows)]);
-          setRows(buildTree(newRows));
+          setRows(newRows);
           setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
         }
       }
@@ -394,6 +392,64 @@ const ForecastTable = () => {
     return (
       <>
         <>{actualText}</>
+        <>
+          <i
+            style={{
+              display: anamolousTagValue ? 'block' : 'none',
+              //visibility: anamolousTag ? "visible" : "hidden",
+              opacity: anamolousTagValue === 'null' ? 0 : 1,
+              color: anamolousTagValue === 'PARTIAL' ? 'lightgray' : 'black',
+            }}
+            id={`${key.text}_${key.currentIndex}`}
+            onMouseUp={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              if (anamolousTagValue === 'null') {
+                tagAnamolous(
+                  reactGrid,
+                  rows,
+                  setRowsToRender,
+                  cellChangesArray,
+                  dispatch,
+                  cellIndexChanges,
+                  focusedRangeTwo,
+                  columns,
+                  rowsToRender,
+                  'TAG',
+                  headerRow
+                );
+              }
+              if (
+                anamolousTagValue === 'PARTIAL' ||
+                anamolousTagValue === 'FULL'
+              ) {
+                tagAnamolous(
+                  reactGrid,
+                  rows,
+                  setRowsToRender,
+                  cellChangesArray,
+                  dispatch,
+                  cellIndexChanges,
+                  focusedRangeTwo,
+                  columns,
+                  rowsToRender,
+                  'UNTAG',
+                  headerRow
+                );
+              }
+            }}
+            onMouseOver={(e) => {
+              if (anamolousTagValue == 'null') {
+                e.target.style.opacity = 1;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (anamolousTagValue === 'null') {
+                e.target.style.opacity = 0;
+              }
+            }}
+            className="fa-solid fa-xmark anamolous-mark"
+          ></i>
+        </>
       </>
     );
   }
@@ -462,17 +518,266 @@ const ForecastTable = () => {
     }
   }
 
+  function tagAnamolous(
+    reactGrid,
+    rows,
+    setRowsToRender,
+    cellChangesArray,
+    dispatch,
+    cellIndexChanges,
+    focusedRangeTwo,
+    columns,
+    rowsToRender,
+    tag,
+    headerRow
+  ) {
+    if (tag === 'TAG') {
+      if (focusedRangeTwo?.current) {
+        tagMultiple(
+          reactGrid,
+          rows,
+          dispatch,
+          focusedRangeTwo,
+          tag,
+          headerRow,
+          setRows
+        );
+      } else {
+        /*handle single tagging*/
+        let colId = reactGrid?.state.focusedLocation.column.idx;
+        let rowId = reactGrid?.state.focusedLocation.row.rowId;
+        let newRows = [...rows];
+        let prevRows = cloneDeep([...rows]);
+        let prevCell = prevRows[rowId].cells[colId];
+        let prevText = prevRows[rowId].cells[colId].text;
+        /* previousCell */
+        let extractPrevText = JSON.parse(prevText).textValue;
+        newRows[rowId].cells[colId].text = JSON.stringify({
+          textValue: extractPrevText,
+          anamolousTagValue: 'FULL',
+        });
+        let newCell = newRows[rowId].cells[colId];
+        let changes = [];
+        let tempObj = {};
+        tempObj = {
+          previousCell: {
+            ...prevCell,
+          },
+          newCell: {
+            ...newCell,
+          },
+          type: 'text',
+          rowId: rowId,
+          columnId: reactGrid?.state.focusedLocation.column.columnId,
+        };
+        changes.push(tempObj);
+        const duplicateChange = changes;
+        dispatch(updateCellChanges(duplicateChange));
+        dispatch(changeCellIndex(1));
+        setRows(newRows);
+        setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+      }
+    } else {
+      if (focusedRangeTwo?.current) {
+        tagMultiple(
+          reactGrid,
+          rows,
+          dispatch,
+          focusedRangeTwo,
+          tag,
+          headerRow,
+          setRows
+        );
+      } else {
+        /*handle single un tagging*/
+        let colId = reactGrid?.state.focusedLocation.column.idx;
+        let rowId = reactGrid?.state.focusedLocation.row.rowId;
+        let newRows = [...rows];
+        let prevRows = cloneDeep([...rows]);
+        let prevCell = prevRows[rowId].cells[colId];
+        let prevText = prevRows[rowId].cells[colId].text;
+        /* previousCell */
+        let extractPrevText = JSON.parse(prevText).textValue;
+        newRows[rowId].cells[colId].text = JSON.stringify({
+          textValue: extractPrevText,
+          anamolousTagValue: 'null',
+        });
+        let newCell = newRows[rowId].cells[colId];
+        let changes = [];
+        let tempObj = {};
+        tempObj = {
+          previousCell: {
+            ...prevCell,
+          },
+          newCell: {
+            ...newCell,
+          },
+          type: 'text',
+          rowId: rowId,
+          columnId: reactGrid?.state.focusedLocation.column.columnId,
+        };
+        changes.push(tempObj);
+        const duplicateChange = changes;
+        dispatch(updateCellChanges(duplicateChange));
+        dispatch(changeCellIndex(1));
+        setRows(newRows);
+        setRowsToRender([headerRow, ...getExpandedRows(newRows)]);
+      }
+    }
+  }
+
+  function tagMultiple(
+    reactGrid,
+    rows,
+    dispatch,
+    focusedRangeTwo,
+    tag,
+    headerRow,
+    setRows
+  ) {
+    if (tag === 'TAG') {
+      alert('hangle multiple tagging');
+      let currentRows = cloneDeep([...rows]);
+      let selectedRows = focusedRangeTwo?.current.rows;
+      let selectedColumns = focusedRangeTwo?.current.columns;
+      let changes = [];
+      let tempObj = {};
+      let prevCellArray = cloneDeep([...currentRows]);
+      let newCellArray = cloneDeep([...currentRows]);
+      selectedRows.map((row) => {
+        let dataIndex = currentRows.findIndex(
+          (item) => item.rowId === row.rowId
+        );
+        if (dataIndex) {
+          selectedColumns.map((ele) => {
+            let columnId = ele.columnId;
+            let indexToBeChecked = ele.idx;
+            let rowId = currentRows[dataIndex].rowId;
+            let cellToBeEdited = currentRows[dataIndex].cells[indexToBeChecked];
+            let parsedText = JSON.parse(cellToBeEdited.text);
+            /* Get eligible Cells */
+            if (cellToBeEdited && parsedText?.anamolousTagValue) {
+              let prevCell = prevCellArray[dataIndex].cells[indexToBeChecked];
+              let newCell = newCellArray[dataIndex].cells[indexToBeChecked];
+              let updatedText = JSON.parse(newCell.text);
+              updatedText = JSON.stringify({
+                ...updatedText,
+                anamolousTagValue: 'FULL',
+              });
+              currentRows[dataIndex].cells[indexToBeChecked].text = updatedText; //update actual row
+              newCell.text = updatedText;
+              tempObj = {
+                previousCell: {
+                  ...prevCell,
+                },
+                newCell: {
+                  ...newCell,
+                },
+                type: 'text',
+                rowId: rowId,
+                columnId: columnId,
+              };
+              changes.push(tempObj);
+            }
+          });
+        }
+      });
+      setRows(currentRows);
+      setRowsToRender([headerRow, ...getExpandedRows(currentRows)]);
+      setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
+    } else {
+      alert('hangle multiple un tagging');
+      let currentRows = cloneDeep([...rows]);
+      let selectedRows = focusedRangeTwo?.current.rows;
+      let selectedColumns = focusedRangeTwo?.current.columns;
+      let changes = [];
+      let tempObj = {};
+      let prevCellArray = cloneDeep([...currentRows]);
+      let newCellArray = cloneDeep([...currentRows]);
+      selectedRows.map((row) => {
+        let dataIndex = currentRows.findIndex(
+          (item) => item.rowId === row.rowId
+        );
+        if (dataIndex) {
+          selectedColumns.map((ele) => {
+            let columnId = ele.columnId;
+            let indexToBeChecked = ele.idx;
+            let rowId = currentRows[dataIndex].rowId;
+            let cellToBeEdited = currentRows[dataIndex].cells[indexToBeChecked];
+            let parsedText = JSON.parse(cellToBeEdited.text);
+            /* Get eligible Cells */
+            if (cellToBeEdited && parsedText?.anamolousTagValue) {
+              let prevCell = prevCellArray[dataIndex].cells[indexToBeChecked];
+              let newCell = newCellArray[dataIndex].cells[indexToBeChecked];
+              let updatedText = JSON.parse(newCell.text);
+              updatedText = JSON.stringify({
+                ...updatedText,
+                anamolousTagValue: 'null',
+              });
+              currentRows[dataIndex].cells[indexToBeChecked].text = updatedText; //update actual row
+              newCell.text = updatedText;
+              tempObj = {
+                previousCell: {
+                  ...prevCell,
+                },
+                newCell: {
+                  ...newCell,
+                },
+                type: 'text',
+                rowId: rowId,
+                columnId: columnId,
+              };
+              changes.push(tempObj);
+            }
+          });
+        }
+      });
+      setRows(currentRows);
+      setRowsToRender([headerRow, ...getExpandedRows(currentRows)]);
+      setPeople((prevPeople) => applyChangesToPeople(changes, prevPeople));
+    }
+  }
+
   return (
-    <div>
+    <div
+      style={{
+        display: 'block',
+        width: 'auto',
+        overflow: 'auto',
+      }}
+      onContextMenu={(e) => handleMasterContextMenu(e)}
+    >
       <div
-        onContextMenu={(e) => handleMasterContextMenu(e)}
-        style={{
-          display: 'block',
-          width: 'auto',
-          overflow: 'auto',
+        onKeyDown={(e) => {
+          if ((!isMacOs() && e.ctrlKey) || e.metaKey) {
+            switch (e.key) {
+              case 'z':
+                handleUndoChanges();
+                return;
+              case 'y':
+                handleRedoChanges();
+                return;
+            }
+          }
+        }}
+      ></div>
+      <div
+        onMouseUp={(e) => {
+          e.stopPropagation();
+          if (reactGrid) {
+            focusedRangeTwo.current = {
+              rows: reactGrid?.state?.selectedRanges?.[0]?.rows,
+              columns: reactGrid?.state?.selectedRanges?.[0]?.columns,
+            };
+          }
         }}
       >
         <ReactGrid
+          ref={(newRef) => {
+            if (newRef) {
+              reactGrid = newRef;
+            }
+          }}
           rows={rowsToRender}
           columns={columns}
           onCellsChanged={handleChanges}
